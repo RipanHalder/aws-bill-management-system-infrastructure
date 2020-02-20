@@ -40,7 +40,7 @@
         ]
       }
     },
-    "PrivateSubnetId1": {
+    "PublicSubnetId1": {
       "Type": "AWS::EC2::Subnet",
       "Properties": {
         "VpcId": {
@@ -60,12 +60,12 @@
         "Tags": [
           {
             "Key": "Name",
-            "Value": "MyPrivateSubnetID1-csye6225"
+            "Value": "MyPublicSubnetID1-csye6225"
           }
         ]
       }
     },
-    "PrivateSubnetId2": {
+    "PublicSubnetId2": {
       "Type": "AWS::EC2::Subnet",
       "Properties": {
         "VpcId": {
@@ -85,12 +85,12 @@
         "Tags": [
           {
             "Key": "Name",
-            "Value": "MyPrivateSubnetID2-csye6225"
+            "Value": "MyPublicSubnetID2-csye6225"
           }
         ]
       }
     },
-    "PrivateSubnetId3": {
+    "PublicSubnetId3": {
       "Type": "AWS::EC2::Subnet",
       "Properties": {
         "VpcId": {
@@ -110,7 +110,7 @@
         "Tags": [
           {
             "Key": "Name",
-            "Value": "MyPrivateSubnetID3-csye6225"
+            "Value": "MyPublicSubnetID3-csye6225"
           }
         ]
       }
@@ -167,7 +167,7 @@
       "Type": "AWS::EC2::SubnetRouteTableAssociation",
       "Properties": {
         "SubnetId": {
-          "Ref": "PrivateSubnetId1"
+          "Ref": "PublicSubnetId1"
         },
         "RouteTableId": {
           "Ref": "MyRouteTable"
@@ -178,7 +178,7 @@
       "Type": "AWS::EC2::SubnetRouteTableAssociation",
       "Properties": {
         "SubnetId": {
-          "Ref": "PrivateSubnetId2"
+          "Ref": "PublicSubnetId2"
         },
         "RouteTableId": {
           "Ref": "MyRouteTable"
@@ -189,7 +189,7 @@
       "Type": "AWS::EC2::SubnetRouteTableAssociation",
       "Properties": {
         "SubnetId": {
-          "Ref": "PrivateSubnetId3"
+          "Ref": "PublicSubnetId3"
         },
         "RouteTableId": {
           "Ref": "MyRouteTable"
