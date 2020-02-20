@@ -1,0 +1,1 @@
+aws cloudformation --profile devuser delete-stack --stack-name ripan-halder-cf2
