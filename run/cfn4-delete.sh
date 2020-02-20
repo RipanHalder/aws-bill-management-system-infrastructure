@@ -1,0 +1,1 @@
+aws cloudformation --profile produser delete-stack --stack-name ripan-halder-cf4 --region us-east-2
