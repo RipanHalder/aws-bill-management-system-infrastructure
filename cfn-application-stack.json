@@ -1,11 +1,17 @@
 {
     "AWSTemplateFormatVersion": "2010-09-09",
     "Description": "Infrastructure Setup using CloudFormation - Application Stack",
+    "Conditions": {
+        "ConditionForRDSPublicAccessibility": {
+            "Fn::Equals": [
+                {
+                    "Ref": "RDSPublicAccessibility"
+                },
+                "yes"
+            ]
+        }
+    },
     "Parameters": {
-        "Region": {
-            "Type": "String",
-            "Default": "us-east-1"
-        },
         "VPCCidrBlockParameter": {
             "Type": "String",
             "Description": "Enter the CIDR Block range: ",
@@ -71,6 +77,16 @@
         "DBPassword": {
             "Type": "String",
             "NoEcho": true
+        },
+        "RDSPublicAccessibility": {
+            "Type": "String",
+            "AllowedValues": [
+                "yes",
+                "no"
+            ]
+        },
+        "EC2InstanceSize":{
+            "Type": "Number"
         }
     },
     "Resources": {
@@ -478,7 +494,9 @@
                     {
                         "DeviceName": "/dev/sda1",
                         "Ebs": {
-                            "VolumeSize": "20",
+                            "VolumeSize": {
+                                "Ref": "EC2InstanceSize"
+                            },
                             "VolumeType": "gp2",
                             "DeleteOnTermination": true
                         }
@@ -561,7 +579,13 @@
                     "Ref": "DBPassword"
                 },
                 "MultiAZ": false,
-                "PubliclyAccessible": false,
+                "PubliclyAccessible": {
+                    "Fn::If": [
+                        "ConditionForRDSPublicAccessibility",
+                        true,
+                        false
+                    ]
+                },
                 "Tags": [
                     {
                         "Key": "Name",
