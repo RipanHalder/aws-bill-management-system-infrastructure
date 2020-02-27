@@ -36,8 +36,7 @@
             "Type": "String",
             "Default": "t2.micro",
             "AllowedValues": [
-                "t2.micro",
-                "m1.small"
+                "t2.micro"
             ],
             "Description": "Enter t2.micro or m1.small. Default is t2.micro."
         },
@@ -324,21 +323,13 @@
         },
         "S3Bucket": {
             "Type": "AWS::S3::Bucket",
+            "DeletionPolicy": "Delete",
             "Properties": {
-                "BucketName": {
-                    "Fn::Join": [
-                        "",
-                        [
-                            "ripan-halder-s3-csye-6255-",
-                            {
-                                "Ref": "MyCloudVPC"
-                            },
-                            "-",
-                            {
-                                "Ref": "Region"
-                            }
-                        ]
-                    ]
+                "PublicAccessBlockConfiguration": {
+                    "BlockPublicAcls": "true",
+                    "BlockPublicPolicy": "true",
+                    "IgnorePublicAcls": "true",
+                    "RestrictPublicBuckets": "true"
                 },
                 "LifecycleConfiguration": {
                     "Rules": [
@@ -378,7 +369,10 @@
                         {
                             "Effect": "Allow",
                             "Action": [
-                                "s3:*"
+                                "s3:ListBucket",
+                                "s3:PutObject",
+                                "s3:GetObject",
+                                "s3:DeleteObject"
                             ],
                             "Resource": {
                                 "Fn::Join": [
@@ -497,13 +491,7 @@
                             "",
                             [
                                 "#!/bin/bash \n",
-                                "sudo apt-get update \n",
-                                "sudo apt install postgresql-client-common \n",
-                                "sudo apt install postgresql postgresql-contrib \n",
-                                "mkdir Cloud \n",
-                                "cd Cloud \n",
                                 "sudo apt install unzip \n",
-                                "sudo service codedeploy-agent status \n",
                                 "echo export DB_HOST=",
                                 {
                                     "Fn::GetAtt": [
@@ -525,6 +513,11 @@
                                     "Ref": "DBUser"
                                 },
                                 " >> /etc/profile \n",
+                                "echo export DB_NAME=",
+                                {
+                                    "Ref": "DBName"
+                                },
+                                " >> /etc/profile \n",
                                 "echo export DB_PASSWORD=",
                                 {
                                     "Ref": "DBPassword"
@@ -532,10 +525,7 @@
                                 " >> /etc/profile \n",
                                 "echo export S3_BUCKET=",
                                 {
-                                    "Fn::GetAtt": [
-                                        "S3Bucket",
-                                        "Arn"
-                                    ]
+                                    "Ref": "S3Bucket"
                                 },
                                 " >> /etc/profile \n"
                             ]
