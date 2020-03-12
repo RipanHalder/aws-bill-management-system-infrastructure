@@ -764,6 +764,60 @@
                 ]
             }
         },
+        "CodeDeployApplication": {
+            "Type": "AWS::CodeDeploy::Application",
+            "Properties": {
+                "ApplicationName": {
+                    "Ref": "CodeDeployApplicationName"
+                },
+                "ComputePlatform": "Server"
+            }
+        },
+        "CodeDeploymentGroup": {
+            "Type": "AWS::CodeDeploy::DeploymentGroup",
+            "Properties": {
+                "ApplicationName": {
+                    "Ref": "CodeDeployApplication"
+                },
+                "AutoRollbackConfiguration": {
+                    "Enabled": true,
+                    "Events": [
+                        "DEPLOYMENT_FAILURE"
+                    ]
+                },
+                "DeploymentConfigName": "CodeDeployDefault.AllAtOnce",
+                "DeploymentGroupName": {
+                    "Fn::Join": [
+                        "",
+                        [
+                            "webapp-code-deployment-group-",
+                            {
+                                "Ref": "AppName"
+                            }
+                        ]
+                    ]
+                },
+                "DeploymentStyle": {
+                    "DeploymentOption": "WITHOUT_TRAFFIC_CONTROL",
+                    "DeploymentType": "IN_PLACE"
+                },
+                "Ec2TagFilters": [
+                    {
+                        "Key": "Name",
+                        "Type": "KEY_AND_VALUE",
+                        "Value": {
+                            "Fn::Sub": "EC2Instance-${AppName}"
+                        }
+                    }
+                ],
+                "ServiceRoleArn": {
+                    "Fn::GetAtt": [
+                        "CodeDeployServiceRole",
+                        "Arn"
+                    ]
+                }
+            }
+        },
         "ec2Instance": {
             "Type": "AWS::EC2::Instance",
             "DependsOn": [
@@ -825,44 +879,45 @@
                             "",
                             [
                                 "#!/bin/bash \n",
+                                "sudo apt update \n",
                                 "sudo apt install unzip \n",
                                 "sudo service codedeploy-agent status \n",
-                                "echo export DB_HOST=",
+                                "sudo echo export DB_HOST=",
                                 {
                                     "Fn::GetAtt": [
                                         "RDSInstance",
                                         "Endpoint.Address"
                                     ]
                                 },
-                                " >> /etc/profile \n",
-                                "echo export DB_PORT=",
+                                " >> /etc/environment \n",
+                                "sudo echo export DB_PORT=",
                                 {
                                     "Fn::GetAtt": [
                                         "RDSInstance",
                                         "Endpoint.Port"
                                     ]
                                 },
-                                " >> /etc/profile \n",
-                                "echo export DB_USERNAME=",
+                                " >> /etc/environment \n",
+                                "sudo echo export DB_USERNAME=",
                                 {
                                     "Ref": "DBUser"
                                 },
-                                " >> /etc/profile \n",
-                                "echo export DB_NAME=",
+                                " >> /etc/environment \n",
+                                "sudo echo export DB_NAME=",
                                 {
                                     "Ref": "DBName"
                                 },
-                                " >> /etc/profile \n",
-                                "echo export DB_PASSWORD=",
+                                " >> /etc/environment \n",
+                                "sudo echo export DB_PASSWORD=",
                                 {
                                     "Ref": "DBPassword"
                                 },
-                                " >> /etc/profile \n",
-                                "echo export S3_BUCKET=",
+                                " >> /etc/environment \n",
+                                "sudo echo export S3_BUCKET=",
                                 {
                                     "Ref": "S3Bucket"
                                 },
-                                " >> /etc/profile \n"
+                                " >> /etc/environment \n"
                             ]
                         ]
                     }
