@@ -99,6 +99,9 @@
         },
         "S3ArtifactsBucket": {
             "Type": "String"
+        },
+        "CICDUser": {
+            "Type": "String"
         }
     },
     "Resources": {
@@ -351,8 +354,9 @@
                         }
                     ]
                 },
-                "Users": [
-                    "circleci"
+                "Users": [{
+                        "Ref": "CICDUser"
+                    }
                 ]
             }
         },
@@ -392,6 +396,7 @@
                                             {
                                                 "Ref": "AWSAccountID"
                                             },
+
                                             ":application:",
                                             {
                                                 "Ref": "CodeDeployApplicationName"
@@ -469,8 +474,9 @@
                         }
                     ]
                 },
-                "Users": [
-                    "circleci"
+                "Users": [{
+                        "Ref": "CICDUser"
+                    }
                 ]
             }
         },
@@ -790,10 +796,10 @@
                     "Fn::Join": [
                         "",
                         [
-                            "webapp-code-deployment-group-",
                             {
-                                "Ref": "AppName"
-                            }
+                                "Ref": "CodeDeployApplicationName"
+                            },
+                            "-Group"
                         ]
                     ]
                 },
