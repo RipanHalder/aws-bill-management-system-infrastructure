@@ -354,7 +354,8 @@
                         }
                     ]
                 },
-                "Users": [{
+                "Users": [
+                    {
                         "Ref": "CICDUser"
                     }
                 ]
@@ -396,7 +397,6 @@
                                             {
                                                 "Ref": "AWSAccountID"
                                             },
-
                                             ":application:",
                                             {
                                                 "Ref": "CodeDeployApplicationName"
@@ -474,7 +474,8 @@
                         }
                     ]
                 },
-                "Users": [{
+                "Users": [
+                    {
                         "Ref": "CICDUser"
                     }
                 ]
@@ -505,7 +506,9 @@
                     },
                     {
                         "Ref": "WebAppS3EC2S3Policy"
-                    }
+                    },
+                    "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy",
+                    "arn:aws:iam::aws:policy/CloudWatchAgentAdminPolicy"
                 ],
                 "RoleName": {
                     "Fn::Join": [
