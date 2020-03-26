@@ -103,10 +103,10 @@
         "CICDUser": {
             "Type": "String"
         },
-        "CPUPolicyTargetDOWNValue": {
+        "Route53HostedZoneId": {
             "Type": "String"
         },
-        "CPUPolicyTargetUPValue": {
+        "Route53RecordName": {
             "Type": "String"
         }
     },
@@ -418,9 +418,9 @@
                                 "codedeploy:CreateDeployment",
                                 "codedeploy:GetDeployment"
                             ],
-                            "Resource": [
-                                "*"
-                            ]
+                            "Resource": {
+                                "Fn::Sub": "arn:aws:codedeploy:${AWS::Region}:${AWS::AccountId}:deploymentgroup:${CodeDeployApplication}/${CodeDeploymentGroup}"
+                            }
                         },
                         {
                             "Effect": "Allow",
@@ -588,21 +588,45 @@
                     },
                     {
                         "IpProtocol": "tcp",
-                        "CidrIp": "0.0.0.0/0",
-                        "FromPort": 80,
-                        "ToPort": 80
-                    },
-                    {
-                        "IpProtocol": "tcp",
-                        "CidrIp": "0.0.0.0/0",
-                        "FromPort": 443,
-                        "ToPort": 443
-                    },
-                    {
-                        "IpProtocol": "tcp",
-                        "CidrIp": "0.0.0.0/0",
+                        "SourceSecurityGroupId": {
+                            "Ref": "LoadBalancerSecurityGroup"
+                        },
                         "FromPort": 8000,
                         "ToPort": 8000
+                    }
+                ],
+                "VpcId": {
+                    "Ref": "MyCloudVPC"
+                }
+            }
+        },
+        "LoadBalancerSecurityGroup": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupName": {
+                    "Fn::Sub": "LoadBalancerSecurityGroup-${AppName}"
+                },
+                "GroupDescription": "Load Balancer Security Group",
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub": "LoadBalancerSecurityGroup-${AppName}"
+                        }
+                    }
+                ],
+                "SecurityGroupIngress": [
+                    {
+                        "IpProtocol": "tcp",
+                        "CidrIp": "0.0.0.0/0",
+                        "FromPort": 22,
+                        "ToPort": 22
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "80",
+                        "ToPort": "80",
+                        "CidrIp": "0.0.0.0/0"
                     }
                 ],
                 "VpcId": {
@@ -823,13 +847,25 @@
                 },
                 "Ec2TagFilters": [
                     {
-                        "Key": "Name",
+                        "Key": "EC2InstancesName",
                         "Type": "KEY_AND_VALUE",
                         "Value": {
-                            "Fn::Sub": "EC2Instance-${AppName}"
+                            "Fn::Sub": "EC2_AutoScale_${AppName}"
                         }
                     }
                 ],
+                "LoadBalancerInfo": {
+                    "TargetGroupInfoList": [
+                        {
+                            "Name": {
+                                "Fn::GetAtt": [
+                                    "LoadBalancerV2TargetGroup",
+                                    "TargetGroupName"
+                                ]
+                            }
+                        }
+                    ]
+                },
                 "ServiceRoleArn": {
                     "Fn::GetAtt": [
                         "CodeDeployServiceRole",
@@ -932,12 +968,16 @@
         "AutoScalingGroup": {
             "Type": "AWS::AutoScaling::AutoScalingGroup",
             "Properties": {
+                "AutoScalingGroupName": {
+                    "Fn::Sub": "EC2_AutoScale_${AppName}"
+                },
                 "LaunchConfigurationName": {
                     "Ref": "AutoScalingConfig"
                 },
-                "MinSize": "2",
-                "MaxSize": "5",
-                "DesiredCapacity": "2",
+                "MinSize": 2,
+                "MaxSize": 5,
+                "DesiredCapacity": 2,
+                "Cooldown": 60,
                 "VPCZoneIdentifier": [
                     {
                         "Ref": "PublicSubnetId1"
@@ -945,10 +985,17 @@
                 ],
                 "Tags": [
                     {
-                        "Key" : "EC2InstancesName",
-                        "PropagateAtLaunch" : "true",
-                        "Value" : "EC2-AutoScale"
-                      }
+                        "Key": "EC2InstancesName",
+                        "PropagateAtLaunch": "true",
+                        "Value": {
+                            "Fn::Sub": "EC2_AutoScale_${AppName}"
+                        }
+                    }
+                ],
+                "TargetGroupARNs": [
+                    {
+                        "Ref": "LoadBalancerV2TargetGroup"
+                    }
                 ]
             }
         },
@@ -959,16 +1006,8 @@
                 "AutoScalingGroupName": {
                     "Ref": "AutoScalingGroup"
                 },
-                "PolicyType": "TargetTrackingScaling",
-                "TargetTrackingConfiguration": {
-                    "PredefinedMetricSpecification": {
-                        "PredefinedMetricType": "ASGAverageCPUUtilization"
-                    },
-                    "TargetValue": {
-                        "Ref": "CPUPolicyTargetUPValue"
-                    }
-                },
-                "EstimatedInstanceWarmup": "60"
+                "Cooldown": "60",
+                "ScalingAdjustment": "1"
             }
         },
         "WebServerScaleDownPolicy": {
@@ -978,28 +1017,20 @@
                 "AutoScalingGroupName": {
                     "Ref": "AutoScalingGroup"
                 },
-                "PolicyType": "TargetTrackingScaling",
-                "TargetTrackingConfiguration": {
-                    "PredefinedMetricSpecification": {
-                        "PredefinedMetricType": "ASGAverageCPUUtilization"
-                    },
-                    "TargetValue": {
-                        "Ref": "CPUPolicyTargetDOWNValue"
-                    }
-                },
-                "EstimatedInstanceWarmup": "60"
+                "Cooldown": "60",
+                "ScalingAdjustment": "-1"
             }
         },
         "CPUAlarmHigh": {
             "Type": "AWS::CloudWatch::Alarm",
             "Properties": {
-                "AlarmDescription": "Scale-up if CPU > 90% for 10 minutes",
+                "AlarmDescription": "Scale-up if CPU > 5% for 4 minutes",
                 "MetricName": "CPUUtilization",
                 "Namespace": "AWS/EC2",
                 "Statistic": "Average",
-                "Period": "300",
-                "EvaluationPeriods": "2",
-                "Threshold": "90",
+                "Period": "240",
+                "EvaluationPeriods": "1",
+                "Threshold": 5,
                 "AlarmActions": [
                     {
                         "Ref": "WebServerScaleUpPolicy"
@@ -1019,13 +1050,13 @@
         "CPUAlarmLow": {
             "Type": "AWS::CloudWatch::Alarm",
             "Properties": {
-                "AlarmDescription": "Scale-down if CPU < 70% for 10 minutes",
+                "AlarmDescription": "Scale-down if CPU < 3% for 4 minutes",
                 "MetricName": "CPUUtilization",
                 "Namespace": "AWS/EC2",
                 "Statistic": "Average",
-                "Period": "300",
-                "EvaluationPeriods": "2",
-                "Threshold": "70",
+                "Period": "60",
+                "EvaluationPeriods": "1",
+                "Threshold": 3,
                 "AlarmActions": [
                     {
                         "Ref": "WebServerScaleDownPolicy"
@@ -1040,6 +1071,97 @@
                     }
                 ],
                 "ComparisonOperator": "LessThanThreshold"
+            }
+        },
+        "LoadBalancerV2": {
+            "Type": "AWS::ElasticLoadBalancingV2::LoadBalancer",
+            "Properties": {
+                "Name": {
+                    "Fn::Sub": "LBV2-${AppName}"
+                },
+                "SecurityGroups": [
+                    {
+                        "Ref": "LoadBalancerSecurityGroup"
+                    }
+                ],
+                "Subnets": [
+                    {
+                        "Ref": "PublicSubnetId1"
+                    },
+                    {
+                        "Ref": "PublicSubnetId2"
+                    },
+                    {
+                        "Ref": "PublicSubnetId3"
+                    }
+                ],
+                "Type": "application"
+            }
+        },
+        "LoadBalancerV2Listener": {
+            "Type": "AWS::ElasticLoadBalancingV2::Listener",
+            "Properties": {
+                "DefaultActions": [
+                    {
+                        "Type": "forward",
+                        "TargetGroupArn": {
+                            "Ref": "LoadBalancerV2TargetGroup"
+                        }
+                    }
+                ],
+                "LoadBalancerArn": {
+                    "Ref": "LoadBalancerV2"
+                },
+                "Port": 80,
+                "Protocol": "HTTP"
+            }
+        },
+        "LoadBalancerV2TargetGroup": {
+            "Type": "AWS::ElasticLoadBalancingV2::TargetGroup",
+            "Properties": {
+                "Name": {
+                    "Fn::Sub": "LBV2TG-${AppName}"
+                },
+                "Port": 8000,
+                "TargetType": "instance",
+                "HealthCheckIntervalSeconds": 30,
+                "HealthCheckPort": 8000,
+                "UnhealthyThresholdCount": 5,
+                "HealthyThresholdCount": 2,
+                "HealthCheckPath": "/",
+                "Matcher": {
+                    "HttpCode": "200-499"
+                },
+                "Protocol": "HTTP",
+                "VpcId": {
+                    "Ref": "MyCloudVPC"
+                }
+            }
+        },
+        "Route53RecordSet": {
+            "Type": "AWS::Route53::RecordSet",
+            "Properties": {
+                "HostedZoneId": {
+                    "Ref": "Route53HostedZoneId"
+                },
+                "Name": {
+                    "Ref": "Route53RecordName"
+                },
+                "Type": "A",
+                "AliasTarget": {
+                    "HostedZoneId": {
+                        "Fn::GetAtt": [
+                            "LoadBalancerV2",
+                            "CanonicalHostedZoneID"
+                        ]
+                    },
+                    "DNSName": {
+                        "Fn::GetAtt": [
+                            "LoadBalancerV2",
+                            "DNSName"
+                        ]
+                    }
+                }
             }
         },
         "RDSInstance": {
