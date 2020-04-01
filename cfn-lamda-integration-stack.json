@@ -939,6 +939,16 @@
                                     ]
                                 },
                                 " >> /etc/environment \n",
+                                "sudo echo export AWS_DEFAULT_REGION=",
+                                {
+                                    "Ref": "AWSRegion"
+                                },
+                                " >> /etc/environment \n",
+                                "sudo echo export SQS_QUEUE_URL=",
+                                {
+                                    "Ref": "SQSQueue"
+                                },
+                                " >> /etc/environment \n",
                                 "sudo echo export DB_USERNAME=",
                                 {
                                     "Ref": "DBUser"
@@ -1295,6 +1305,10 @@
                     {
                         "AttributeName": "Id",
                         "KeyType": "HASH"
+                    },
+                    {
+                        "AttributeName": "user_email",
+                        "KeyType": "RANGE"
                     }
                 ],
                 "TableName": {
