@@ -974,8 +974,8 @@
                 "LaunchConfigurationName": {
                     "Ref": "AutoScalingConfig"
                 },
-                "MinSize": 2,
-                "MaxSize": 5,
+                "MinSize": 1,
+                "MaxSize": 2,
                 "DesiredCapacity": 2,
                 "Cooldown": 60,
                 "VPCZoneIdentifier": [
@@ -1236,6 +1236,79 @@
                         "Key": "Name",
                         "Value": {
                             "Fn::Sub": "${AppName}-DBSubnetGroup"
+                        }
+                    }
+                ]
+            }
+        },
+        "SQSQueue": {
+            "Type": "AWS::SQS::Queue",
+            "Properties": {
+                "MessageRetentionPeriod": 86400,
+                "QueueName": {
+                    "Fn::Sub": "SQSQueue-${AppName}"
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub": "SQSQueue-${AppName}"
+                        }
+                    }
+                ],
+                "VisibilityTimeout": 20
+            }
+        },
+        "SNSTopic": {
+            "Type": "AWS::SNS::Topic",
+            "Properties": {
+                "Subscription": [
+                    {
+                        "Endpoint": {
+                            "Fn::GetAtt": [
+                                "SQSQueue",
+                                "Arn"
+                            ]
+                        },
+                        "Protocol": "sqs"
+                    }
+                ],
+                "TopicName": {
+                    "Fn::Sub": "SNSTopic-${AppName}"
+                }
+            }
+        },
+        "DynamoDBTable": {
+            "Type": "AWS::DynamoDB::Table",
+            "Properties": {
+                "AttributeDefinitions": [
+                    {
+                        "AttributeName": "Id",
+                        "AttributeType": "S"
+                    },
+                    {
+                        "AttributeName": "user_email",
+                        "AttributeType": "S"
+                    }
+                ],
+                "KeySchema": [
+                    {
+                        "AttributeName": "Id",
+                        "KeyType": "HASH"
+                    }
+                ],
+                "TableName": {
+                    "Fn::Sub": "DynamoDBTable-${AppName}"
+                },
+                "ProvisionedThroughput": {
+                    "ReadCapacityUnits": "5",
+                    "WriteCapacityUnits": "5"
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub": "DynamoDBTable-${AppName}"
                         }
                     }
                 ]
