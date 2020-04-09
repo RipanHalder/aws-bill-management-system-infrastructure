@@ -94,6 +94,9 @@
         },
         "S3LambdaArtifactsBucket": {
             "Type": "String"
+        },
+        "CertifcateARN": {
+            "Type": "String"
         }
     },
     "Resources": {
@@ -455,12 +458,6 @@
                 "SecurityGroupIngress": [
                     {
                         "IpProtocol": "tcp",
-                        "CidrIp": "0.0.0.0/0",
-                        "FromPort": 22,
-                        "ToPort": 22
-                    },
-                    {
-                        "IpProtocol": "tcp",
                         "SourceSecurityGroupId": {
                             "Ref": "LoadBalancerSecurityGroup"
                         },
@@ -491,16 +488,11 @@
                     }
                 ],
                 "SecurityGroupIngress": [
+                    
                     {
                         "IpProtocol": "tcp",
-                        "CidrIp": "0.0.0.0/0",
-                        "FromPort": 22,
-                        "ToPort": 22
-                    },
-                    {
-                        "IpProtocol": "tcp",
-                        "FromPort": "80",
-                        "ToPort": "80",
+                        "FromPort": "443",
+                        "ToPort": "443",
                         "CidrIp": "0.0.0.0/0"
                     }
                 ],
@@ -840,6 +832,7 @@
                                     ]
                                 },
                                 " >> /etc/environment \n",
+                                "sudo echo export HOME_DIRECTORY=/home/ubuntu/ >> /etc/environment \n",
                                 "sudo echo export DB_PORT=",
                                 {
                                     "Fn::GetAtt": [
@@ -1054,8 +1047,15 @@
                 "LoadBalancerArn": {
                     "Ref": "LoadBalancerV2"
                 },
-                "Port": 80,
-                "Protocol": "HTTP"
+                "Port": 443,
+                "Protocol": "HTTPS",
+                "Certificates": [
+                    {
+                        "CertificateArn": {
+                            "Ref": "CertifcateARN"
+                        }
+                    }
+                ]
             }
         },
         "LoadBalancerV2TargetGroup": {
@@ -1113,6 +1113,7 @@
                 "DBInstanceIdentifier": {
                     "Ref": "DBInstanceIdentifier"
                 },
+                "StorageEncrypted": true,
                 "DBName": {
                     "Ref": "DBName"
                 },
@@ -1159,9 +1160,23 @@
                 ],
                 "DBSubnetGroupName": {
                     "Ref": "DBSubnetGroup"
+                },
+                "DBParameterGroupName": {
+                    "Ref": "RDSParameterGroup"
                 }
             },
             "Type": "AWS::RDS::DBInstance"
+        },
+        "RDSParameterGroup": {
+            "Type": "AWS::RDS::DBParameterGroup",
+            "Properties": {
+                "Description": "RDS Postgres DB Parameter Group",
+                "Family": "postgres11",
+                "Parameters": {
+                    "log_connections": 1
+                }
+            }
+
         },
         "DBSubnetGroup": {
             "Type": "AWS::RDS::DBSubnetGroup",
